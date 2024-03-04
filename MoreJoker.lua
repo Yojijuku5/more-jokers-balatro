@@ -7,14 +7,14 @@
 ------------MOD CODE -------------------------
 
 --Joker metadata
-
 function SMODS.INIT.moreJoker()
 	local moreJokers = {
 		j_buffet = {order = 1, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Buffet", set = "Joker", config = {extra = {chips = 20, chip_mod = 10}}, pos = {x=3,y=10}},
-		j_gaggle = {order = 2, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Gaggle", set = "Joker", config = {extra = {chips = 200, Xmult = 0.5}}, pos = {x=1,y=12}},
-		j_connoisseur = {order = 3, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 2, cost = 5, name = "Connoisseur", set = "Joker", config = {extra = {chips = -200, Xmult = 1.5}}, pos = {x=6,y=5}},
+		--j_gaggle = {order = 2, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Gaggle", set = "Joker", config = {extra = {chips = 200, Xmult = 0.5}}, pos = {x=1,y=12}},
+		--j_connoisseur = {order = 3, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 2, cost = 5, name = "Connoisseur", set = "Joker", config = {extra = {chips = -200, Xmult = 1.5}}, pos = {x=6,y=5}},
 		j_salesman_joker = {order = 4, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}, pos = {x=0,y=10}},
-		j_conglomerate_joker = {order = 5, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}}
+		j_conglomerate_joker = {order = 5, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}},
+		j_archibald = {order = 6, unlocked = false, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}}
 	}
 
 	local jokerDesc = {
@@ -22,6 +22,7 @@ function SMODS.INIT.moreJoker()
 			name = "Buffet",
 			text = {"When {C:attention}Blind{} is selected,", "Gains {C:chips}+#2#{} Chips", "{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)"} --When blind is selected, Gains +20 Chips (Currently +X Chips)
 		},
+		--[[
 		j_gaggle = {
 			name = "Gaggle",
 			text = {"{C:chips}+#1#{} Chips", "{X:mult,C:white}X#2#{} Mult"} --+300 Chips, X0.5 Mult
@@ -30,6 +31,7 @@ function SMODS.INIT.moreJoker()
 			name = "Connoisseur",
 			text = {"{C:chips}#1#{} Chips", "{X:mult,C:white}X#2#{} Mult"} -- -300 Chips, X1.5 Mult
 		},
+		]]--
 		j_salesman_joker = {
 			name = "Salesman Joker",
 			text = {"Sells for {C:money}X#1#{} value"} --Sells for x4 value
@@ -38,16 +40,16 @@ function SMODS.INIT.moreJoker()
 			name = "Conglomerate Joker",
 			text = {"Each played card with", "{V:1}#2#{} suit gives", "{C:money}+$#1#{} when scored,", "{s:0.8}suit changes at end of round"} --+$1 for each card played of a specific suit. The suit changes at the end of each round.
 		},
+		j_archibald = {
+			name = "Archibald",
+			text = {"Gains {X:mult,C:white}X#2#{} Mult with", "every {C:attention}Shop{} purchase", "{C:inactive}(Currently {X:mult,C:white}X#1#{C:inactive} Mult)"}, --Starting at x1 Mult, gains x0.25 Mult with every shop purchase.
+			unlock = {"{E:1,s:1.3}?????"}
+		}
+		
 	}
 	
 	addJokersToPools(moreJokers)
 	updateLocalization(jokerDesc)
-	
-	--Add Sprites. If only using vanilla sprites, keep commented out
-	--local testjoker = SMODS.findModByID("TestJoker")
-	--local sprite_testjoker = SMODS.Sprite:new("Joker", testjoker.path, "jokers_mod.png", 71, 95, "asset_atli")
-	
-	--sprite_testjoker:register()
 end
 
 --Joker ability implementation
@@ -103,7 +105,19 @@ function Card.calculate_joker(self, context)
 
 		--All types of manipulation, joker effects go under respective category
 		if context.open_booster then
+			if self.ability.name == "Archibald" and not context.blueprint then
+				self.ability.x_mult = self.ability.x_mult + self.ability.extra
+				return {
+					card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize{type = 'variable', key = 'a_xmult', vars = {self.ability.x_mult}}})
+				}
+			end
         elseif context.buying_card then
+			if self.ability.name == "Archibald" and not context.blueprint then
+				self.ability.x_mult = self.ability.x_mult + self.ability.extra
+				return {
+					card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize{type = 'variable', key = 'a_xmult', vars = {self.ability.x_mult}}})
+				}
+			end
         elseif context.selling_self then
 			if self.ability.name == "Salesman Joker" then
 				self.ability.extra_value = (self.sell_cost * self.ability.extra) - self.sell_cost
@@ -120,7 +134,7 @@ function Card.calculate_joker(self, context)
 			if self.ability.name == "Buffet" and not context.blueprint then
 				self.ability.extra.chips = self.ability.extra.chips + self.ability.extra.chip_mod
 				return {
-					card_eval_status_text((context.blueprint_card or self), 'extra', nil, nil, nil, {message = localize('k_upgrade_ex'), colour = G.C.CHIPS, card = self})
+					card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize('k_upgrade_ex'), colour = G.C.CHIPS, card = self})
 				}
 			end
         elseif context.destroying_card and not context.blueprint then
@@ -155,6 +169,7 @@ function Card.calculate_joker(self, context)
 							chip_mod = self.ability.extra.chips,
 						}
 					end
+					--[[
 					if self.ability.name == "Gaggle" then
 						card_eval_status_text((context.blueprint_card or self), 'extra', nil, nil, nil, {message = localize{type = 'variable', key = 'a_chips', vars = {self.ability.extra.chips}}, colour = G.C.CHIPS})
 						card_eval_status_text((context.blueprint_card or self), 'extra', nil, nil, nil, {message = localize{type = 'variable', key = 'a_xmult', vars = {self.ability.extra.Xmult}}, colour = G.C.MULT})
@@ -180,6 +195,13 @@ function Card.calculate_joker(self, context)
 							}
 						end
 					end
+					]]--
+					if self.ability.name == "Archibald" and self.ability.x_mult > 1 then
+						return {
+							message = localize{type = 'variable', key = 'a_xmult', vars = {self.ability.x_mult}},
+							Xmult_mod = self.ability.x_mult
+						}
+					end
 				end
 			end
 		end
@@ -204,14 +226,18 @@ function Card.generate_UIBox_ability_table(self)
 		
 		if self.ability.name == "Buffet" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.chip_mod}
+		--[[
 		elseif self.ability.name == "Gaggle" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.Xmult}
 		elseif self.ability.name == "Connoisseur" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.Xmult}
+		]]--
 		elseif self.ability.name == "Salesman Joker" then
 			loc_vars = {self.ability.extra}
 		elseif self.ability.name == "Conglomerate Joker" then
 			loc_vars = {self.ability.extra, localize(G.GAME.current_round.ancient_card.suit, 'suits_singular'), colours = {G.C.SUITS[G.GAME.current_round.ancient_card.suit]}}
+		elseif self.ability.name == "Archibald" then
+			loc_vars = {self.ability.x_mult, self.ability.extra}
 		else
 			customJoker = false
 		end
