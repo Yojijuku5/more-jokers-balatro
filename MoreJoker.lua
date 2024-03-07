@@ -6,15 +6,88 @@
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
+--Code to add jokers to game; from https://github.com/lusciousdev/lushmod
+function sortByOrder(t, arg1, arg2)
+	if t[arg2].order == nil then return true
+	elseif t[arg1].order == nil then return false
+	else
+		if t[arg1].order < t[arg2].order then return true
+		elseif t[arg1].order == t[arg2].order then return true
+		elseif t[arg1].order > t[arg2].order then return false
+		end
+	end
+end
+
+--From https://github.com/lusciousdev/lushmod
+function pairsByOrder(t, f)
+	local a = {}
+	for n in pairs(t) do table.insert(a, n) end
+	table.sort(a, function(a, b) return sortByOrder(t, a, b) end)
+	local i = 0
+	local iter = function ()
+		i = i + 1
+		if a[i] == nil then return nil
+		else return a[i], t[a[i]]
+		end
+	end
+	return iter
+end
+
+--From https://github.com/lusciousdev/lushmod
+function addJokersToPools(jokerTable)
+	for k, v in pairsByOrder(jokerTable) do
+		v.key = k
+		v.order = table_length(G.P_CENTER_POOLS["Joker"]) + v.order
+		G.P_CENTERS[k] = v
+		table.insert(G.P_CENTER_POOLS["Joker"], v)
+		if v.rarity and v.set == "Joker" and not v.demo then
+			table.insert(G.P_JOKER_RARITY_POOLS[v.rarity], v)
+		end
+	end
+
+	table.sort(G.P_CENTER_POOLS["Joker"], function(a, b) return a.order < b.order end)
+end
+
+--From https://github.com/lusciousdev/lushmod
+function updateLocalization(localizationTable)
+	for k, v in pairs(localizationTable) do
+		G.localization.descriptions.Joker[k] = v
+	end
+
+	for g_k, group in pairs(G.localization) do
+		if g_k == "descriptions" then
+			for _, set in pairs(group) do
+				for _, center in pairs(set) do
+					center.text_parsed = {}
+					for _, line in ipairs(center.text) do
+						center.text_parsed[#center.text_parsed + 1] = loc_parse_string(line)
+					end
+					center.name_parsed = {}
+					for _, line in ipairs(type(center.name) == "table" and center.name or {center.name}) do
+						center.name_parsed[#center.name_parsed + 1] = loc_parse_string(line)
+					end
+					if center.unlock then
+						center.unlock_parsed = {}
+						for _, line in ipairs(center.unlock) do
+							center.unlock_parsed[#center.unlock_parsed + 1] = loc_parse_string(line)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 --Joker metadata
 function SMODS.INIT.moreJoker()
 	local moreJokers = {
 		j_buffet = {order = 1, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Buffet", set = "Joker", config = {extra = {chips = 20, chip_mod = 10}}, pos = {x=3,y=10}},
 		--j_gaggle = {order = 2, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Gaggle", set = "Joker", config = {extra = {chips = 200, Xmult = 0.5}}, pos = {x=1,y=12}},
 		--j_connoisseur = {order = 3, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 2, cost = 5, name = "Connoisseur", set = "Joker", config = {extra = {chips = -200, Xmult = 1.5}}, pos = {x=6,y=5}},
-		j_salesman_joker = {order = 4, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}, pos = {x=0,y=10}},
-		j_conglomerate_joker = {order = 5, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}},
-		j_archibald = {order = 6, unlocked = false, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}}
+		j_salesman = {order = 4, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}, pos = {x=0,y=10}},
+		j_conglomerate = {order = 5, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}},
+		j_dressing_table = {order = 6, unlocked = true, discovered = false, blueprint_compat = false, eternal_compat = true, rarity = 2, cost = 6, name = "Dressing Table", set = "Joker", config = {extra = 5}, pos = {x=5,y=2}},
+		j_archibald = {order = 7, unlocked = false, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}}
 	}
 
 	local jokerDesc = {
@@ -32,13 +105,17 @@ function SMODS.INIT.moreJoker()
 			text = {"{C:chips}#1#{} Chips", "{X:mult,C:white}X#2#{} Mult"} -- -300 Chips, X1.5 Mult
 		},
 		]]--
-		j_salesman_joker = {
+		j_salesman = {
 			name = "Salesman Joker",
 			text = {"Sells for {C:money}X#1#{} value"} --Sells for x4 value
 		},
-		j_conglomerate_joker = {
+		j_conglomerate = {
 			name = "Conglomerate Joker",
 			text = {"Each played card with", "{V:1}#2#{} suit gives", "{C:money}+$#1#{} when scored,", "{s:0.8}suit changes at end of round"} --+$1 for each card played of a specific suit. The suit changes at the end of each round.
+		},
+		j_dressing_table = {
+			name = "Dressing Table",
+			text = {"{C:green}#1# in #2#{} chance to", "give a random Joker", "{C:dark_edition}Foil, Holographic,{} or {C:dark_edition}Polychrome{}", "at the end of each round"} --1 in 5 chance to give a Joker Foil, Holographic, Polychrome or Negative at the end of each round.
 		},
 		j_archibald = {
 			name = "Archibald",
@@ -145,6 +222,32 @@ function Card.calculate_joker(self, context)
         elseif context.pre_discard then
         elseif context.discard then
         elseif context.end_of_round then
+			if context.individual then
+			elseif context.repetition then
+			elseif not context.blueprint then
+				if self.ability.name == "Dressing Table" then
+					local dressable_jokers = {}
+					for i = 1, #G.jokers.cards do
+						if G.jokers.cards[i] ~=self then dressable_jokers[#dressable_jokers + 1] = G.jokers.cards[i] end
+					end
+					local eligible_joker = #dressable_jokers > 0 and pseudorandom_element(dressable_jokers, pseudoseed('dressing_table')) or nil
+					if pseudorandom('dressing_table') < G.GAME.probabilities.normal/self.ability.extra then
+						if eligible_joker:get_edition() == nil and not (context.blueprint_card or self).getting_sliced then
+							G.E_MANAGER:add_event(Event({func = function()
+								local edition = nil
+								edition = poll_edition('dressing_table', nil, true, true)
+								eligible_joker:set_edition(edition, true)
+								check_for_unlock({type = 'have_edition'})
+								card_eval_status_text(self, 'extra', nil, nil, nil, {message = 'Dressup!', colour = G.C.PURPLE})
+							return true end}))
+						elseif eligible_joker:get_edition() ~= nil then
+							return nil
+						end
+					else
+						card_eval_status_text(self, 'extra', nil, nil, nil, {message = 'Nope!', colour = G.C.PURPLE})
+					end
+				end
+			end
         elseif context.individual then
 			if context.cardarea == G.play then
 				if self.ability.name == "Conglomerate Joker" and context.other_card:is_suit(G.GAME.current_round.ancient_card.suit) then
@@ -236,6 +339,8 @@ function Card.generate_UIBox_ability_table(self)
 			loc_vars = {self.ability.extra}
 		elseif self.ability.name == "Conglomerate Joker" then
 			loc_vars = {self.ability.extra, localize(G.GAME.current_round.ancient_card.suit, 'suits_singular'), colours = {G.C.SUITS[G.GAME.current_round.ancient_card.suit]}}
+		elseif self.ability.name == "Dressing Table" then
+			loc_vars = {''..(G.GAME and G.GAME.probabilities.normal or 1), self.ability.extra}
 		elseif self.ability.name == "Archibald" then
 			loc_vars = {self.ability.x_mult, self.ability.extra}
 		else
