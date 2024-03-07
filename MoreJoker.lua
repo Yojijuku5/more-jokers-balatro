@@ -231,8 +231,8 @@ function Card.calculate_joker(self, context)
 						if G.jokers.cards[i] ~=self then dressable_jokers[#dressable_jokers + 1] = G.jokers.cards[i] end
 					end
 					local eligible_joker = #dressable_jokers > 0 and pseudorandom_element(dressable_jokers, pseudoseed('dressing_table')) or nil
-					if pseudorandom('dressing_table') < G.GAME.probabilities.normal/self.ability.extra then
-						if eligible_joker:get_edition() == nil and not (context.blueprint_card or self).getting_sliced then
+					if pseudorandom('dressing_table') < G.GAME.probabilities.normal/self.ability.extra and eligible_joker ~= nil and eligible_joker:get_edition() == nil then
+						if not (context.blueprint_card or self).getting_sliced then
 							G.E_MANAGER:add_event(Event({func = function()
 								local edition = nil
 								edition = poll_edition('dressing_table', nil, true, true)
@@ -240,9 +240,8 @@ function Card.calculate_joker(self, context)
 								check_for_unlock({type = 'have_edition'})
 								card_eval_status_text(self, 'extra', nil, nil, nil, {message = 'Dressup!', colour = G.C.PURPLE})
 							return true end}))
-						elseif eligible_joker:get_edition() ~= nil then
-							return nil
 						end
+					elseif eligible_joker == nil or eligible_joker:get_edition() ~= nil then return nil
 					else
 						card_eval_status_text(self, 'extra', nil, nil, nil, {message = 'Nope!', colour = G.C.PURPLE})
 					end
