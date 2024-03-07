@@ -1,5 +1,5 @@
-# More Jokers! - Full functionality not implemented yet!
-A mod for the game Balatro that inserts more Jokers into the game. Currently Work in Progress (not all Jokers work yet).
+# More Jokers!
+A mod for the game Balatro that inserts more Jokers into the game. Currently Work in Progress, but what I have implemented as of now DOES work.
 I've taken some of the code to implement the jokers (all backend) from LushMod (https://github.com/lusciousdev/lushmod), it's sourced in the code :)
 
 ## Dependencies
