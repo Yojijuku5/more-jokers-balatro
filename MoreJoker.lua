@@ -6,96 +6,124 @@
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
---Code to add jokers to game; from https://github.com/lusciousdev/lushmod
-function sortByOrder(t, arg1, arg2)
-	if t[arg2].order == nil then return true
-	elseif t[arg1].order == nil then return false
-	else
-		if t[arg1].order < t[arg2].order then return true
-		elseif t[arg1].order == t[arg2].order then return true
-		elseif t[arg1].order > t[arg2].order then return false
-		end
-	end
+local MOD_ID = "moreJoker"
+
+--Code to add jokers to game; from https://github.com/GoldenEpsilon/ShamPack
+local set_spritesref = Card.set_sprites
+function Card:set_sprites(_center, _front)
+    set_spritesref(self, _center, _front);
+    if _center then
+        if _center.set then
+            if (_center.set == 'Joker' or _center.consumeable or _center.set == 'Voucher') and _center.atlas then
+                self.children.center.atlas = G.ASSET_ATLAS
+                    [(_center.atlas or (_center.set == 'Joker' or _center.consumeable or _center.set == 'Voucher') and _center.set) or 'centers']
+                self.children.center:set_sprite_pos(_center.pos)
+            end
+        end
+    end
 end
 
---From https://github.com/lusciousdev/lushmod
-function pairsByOrder(t, f)
-	local a = {}
-	for n in pairs(t) do table.insert(a, n) end
-	table.sort(a, function(a, b) return sortByOrder(t, a, b) end)
-	local i = 0
-	local iter = function ()
-		i = i + 1
-		if a[i] == nil then return nil
-		else return a[i], t[a[i]]
-		end
-	end
-	return iter
+--https://github.com/GoldenEpsilon/ShamPack
+function add_item(mod_id, pool, id, data, desc)
+    -- Add Sprite
+    data.pos = { x = 0, y = 0 };
+    data.key = id;
+    data.atlas = mod_id .. id;
+    SMODS.Sprite:new(mod_id .. id, SMODS.findModByID(mod_id).path, id .. ".png", 71, 95, "asset_atli"):register();
+
+    data.key = id
+    data.order = #G.P_CENTER_POOLS[pool] + 1
+    G.P_CENTERS[id] = data
+    table.insert(G.P_CENTER_POOLS[pool], data)
+
+    if pool == "Joker" then
+        table.insert(G.P_JOKER_RARITY_POOLS[data.rarity], data)
+    end
+
+    G.localization.descriptions[pool][id] = desc;
 end
 
---From https://github.com/lusciousdev/lushmod
-function addJokersToPools(jokerTable)
-	for k, v in pairsByOrder(jokerTable) do
-		v.key = k
-		v.order = table_length(G.P_CENTER_POOLS["Joker"]) + v.order
-		G.P_CENTERS[k] = v
-		table.insert(G.P_CENTER_POOLS["Joker"], v)
-		if v.rarity and v.set == "Joker" and not v.demo then
-			table.insert(G.P_JOKER_RARITY_POOLS[v.rarity], v)
-		end
-	end
+--https://github.com/GoldenEpsilon/ShamPack
+function refresh_items()
+    for k, v in pairs(G.P_CENTER_POOLS) do
+        table.sort(v, function(a, b) return a.order < b.order end)
+    end
 
-	table.sort(G.P_CENTER_POOLS["Joker"], function(a, b) return a.order < b.order end)
-end
+    -- Update localization
+    for g_k, group in pairs(G.localization) do
+        if g_k == 'descriptions' then
+            for _, set in pairs(group) do
+                for _, center in pairs(set) do
+                    center.text_parsed = {}
+                    for _, line in ipairs(center.text) do
+                        center.text_parsed[#center.text_parsed + 1] = loc_parse_string(line)
+                    end
+                    center.name_parsed = {}
+                    for _, line in ipairs(type(center.name) == 'table' and center.name or { center.name }) do
+                        center.name_parsed[#center.name_parsed + 1] = loc_parse_string(line)
+                    end
+                    if center.unlock then
+                        center.unlock_parsed = {}
+                        for _, line in ipairs(center.unlock) do
+                            center.unlock_parsed[#center.unlock_parsed + 1] = loc_parse_string(line)
+                        end
+                    end
+                end
+            end
+        end
+    end
 
---From https://github.com/lusciousdev/lushmod
-function updateLocalization(localizationTable)
-	for k, v in pairs(localizationTable) do
-		G.localization.descriptions.Joker[k] = v
-	end
-
-	for g_k, group in pairs(G.localization) do
-		if g_k == "descriptions" then
-			for _, set in pairs(group) do
-				for _, center in pairs(set) do
-					center.text_parsed = {}
-					for _, line in ipairs(center.text) do
-						center.text_parsed[#center.text_parsed + 1] = loc_parse_string(line)
-					end
-					center.name_parsed = {}
-					for _, line in ipairs(type(center.name) == "table" and center.name or {center.name}) do
-						center.name_parsed[#center.name_parsed + 1] = loc_parse_string(line)
-					end
-					if center.unlock then
-						center.unlock_parsed = {}
-						for _, line in ipairs(center.unlock) do
-							center.unlock_parsed[#center.unlock_parsed + 1] = loc_parse_string(line)
-						end
-					end
-				end
-			end
-		end
-	end
+    for k, v in pairs(G.P_JOKER_RARITY_POOLS) do
+        table.sort(G.P_JOKER_RARITY_POOLS[k], function(a, b) return a.order < b.order end)
+    end
 end
 
 --Joker metadata
 function SMODS.INIT.moreJoker()
+
+	add_item(MOD_ID, "Joker", "j_buffet", 
+	{order = 1, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Buffet", set = "Joker", config = {extra = {chips = 20, chip_mod = 10}}},
+	{
+		name = "Buffet",
+		text = {"When {C:attention}Blind{} is selected,", "Gains {C:chips}+#2#{} Chips", "{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)"} --When blind is selected, Gains +20 Chips (Currently +X Chips)
+	})
+
+	add_item(MOD_ID, "Joker", "j_salesman",
+	{order = 2, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}, pos = {x=0,y=10}},
+	{
+		name = "Salesman Joker",
+		text = {"Sells for {C:money}X#1#{} value"} --Sells for x4 value
+	})
+
+	add_item(MOD_ID, "Joker", "j_conglomerate",
+	{order = 3, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}},
+	{
+		name = "Conglomerate Joker",
+		text = {"Each played card with", "{V:1}#2#{} suit gives", "{C:money}+$#1#{} when scored,", "{s:0.8}suit changes at end of round"} --+$1 for each card played of a specific suit. The suit changes at the end of each round.
+	})
+
+	add_item(MOD_ID, "Joker", "j_dressing_table",
+	{order = 4, unlocked = true, discovered = true, blueprint_compat = false, eternal_compat = true, rarity = 2, cost = 6, name = "Dressing Table", set = "Joker", config = {extra = 5}, pos = {x=5,y=2}},
+	{
+		name = "Dressing Table",
+		text = {"{C:green}#1# in #2#{} chance to", "give a random Joker", "{C:dark_edition}Foil, Holographic,{} or {C:dark_edition}Polychrome{}", "at the end of each round"} --1 in 5 chance to give a Joker Foil, Holographic, Polychrome or Negative at the end of each round.
+	})
+
+	add_item(MOD_ID, "Joker", "j_archibald",
+	{order = 5, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}},
+	{
+		name = "Archibald",
+		text = {"Gains {X:mult,C:white}X#2#{} Mult with", "every {C:attention}Shop{} purchase", "{C:inactive}(Currently {X:mult,C:white}X#1#{C:inactive} Mult)"}, --Starting at x1 Mult, gains x0.25 Mult with every shop purchase.
+		unlock = {"{E:1,s:1.3}?????"}
+	})
+
+	--[[
 	local moreJokers = {
-		j_buffet = {order = 1, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Buffet", set = "Joker", config = {extra = {chips = 20, chip_mod = 10}}, pos = {x=3,y=10}},
 		--j_gaggle = {order = 2, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Gaggle", set = "Joker", config = {extra = {chips = 200, Xmult = 0.5}}, pos = {x=1,y=12}},
 		--j_connoisseur = {order = 3, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 2, cost = 5, name = "Connoisseur", set = "Joker", config = {extra = {chips = -200, Xmult = 1.5}}, pos = {x=6,y=5}},
-		j_salesman = {order = 4, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}, pos = {x=0,y=10}},
-		j_conglomerate = {order = 5, unlocked = true, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}},
-		j_dressing_table = {order = 6, unlocked = true, discovered = false, blueprint_compat = false, eternal_compat = true, rarity = 2, cost = 6, name = "Dressing Table", set = "Joker", config = {extra = 5}, pos = {x=5,y=2}},
-		j_archibald = {order = 7, unlocked = false, discovered = false, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}}
 	}
 
 	local jokerDesc = {
-		j_buffet = {
-			name = "Buffet",
-			text = {"When {C:attention}Blind{} is selected,", "Gains {C:chips}+#2#{} Chips", "{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)"} --When blind is selected, Gains +20 Chips (Currently +X Chips)
-		},
-		--[[
 		j_gaggle = {
 			name = "Gaggle",
 			text = {"{C:chips}+#1#{} Chips", "{X:mult,C:white}X#2#{} Mult"} --+300 Chips, X0.5 Mult
@@ -104,29 +132,10 @@ function SMODS.INIT.moreJoker()
 			name = "Connoisseur",
 			text = {"{C:chips}#1#{} Chips", "{X:mult,C:white}X#2#{} Mult"} -- -300 Chips, X1.5 Mult
 		},
-		]]--
-		j_salesman = {
-			name = "Salesman Joker",
-			text = {"Sells for {C:money}X#1#{} value"} --Sells for x4 value
-		},
-		j_conglomerate = {
-			name = "Conglomerate Joker",
-			text = {"Each played card with", "{V:1}#2#{} suit gives", "{C:money}+$#1#{} when scored,", "{s:0.8}suit changes at end of round"} --+$1 for each card played of a specific suit. The suit changes at the end of each round.
-		},
-		j_dressing_table = {
-			name = "Dressing Table",
-			text = {"{C:green}#1# in #2#{} chance to", "give a random Joker", "{C:dark_edition}Foil, Holographic,{} or {C:dark_edition}Polychrome{}", "at the end of each round"} --1 in 5 chance to give a Joker Foil, Holographic, Polychrome or Negative at the end of each round.
-		},
-		j_archibald = {
-			name = "Archibald",
-			text = {"Gains {X:mult,C:white}X#2#{} Mult with", "every {C:attention}Shop{} purchase", "{C:inactive}(Currently {X:mult,C:white}X#1#{C:inactive} Mult)"}, --Starting at x1 Mult, gains x0.25 Mult with every shop purchase.
-			unlock = {"{E:1,s:1.3}?????"}
-		}
-		
 	}
-	
-	addJokersToPools(moreJokers)
-	updateLocalization(jokerDesc)
+	]]--
+
+	refresh_items()
 end
 
 --Joker ability implementation
@@ -138,9 +147,9 @@ end
 local calculate_jokerref = Card.calculate_joker
 function Card.calculate_joker(self, context)
 	local calc_ref = calculate_jokerref(self, context)
-	
+
 	if self.ability.set == "Joker" and not self.debuff then
-		
+
 		--Bluprint/Brainstorm checks
 		if self.ability.name == "Blueprint" then
 			local other_joker = nil
@@ -218,7 +227,7 @@ function Card.calculate_joker(self, context)
         elseif context.cards_destroyed then
         elseif context.remove_playing_cards then
         elseif context.using_consumeable then
-        elseif context.debuffed_hand then 
+        elseif context.debuffed_hand then
         elseif context.pre_discard then
         elseif context.discard then
         elseif context.end_of_round then
@@ -328,12 +337,10 @@ function Card.generate_UIBox_ability_table(self)
 		
 		if self.ability.name == "Buffet" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.chip_mod}
-		--[[
 		elseif self.ability.name == "Gaggle" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.Xmult}
 		elseif self.ability.name == "Connoisseur" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.Xmult}
-		]]--
 		elseif self.ability.name == "Salesman Joker" then
 			loc_vars = {self.ability.extra}
 		elseif self.ability.name == "Conglomerate Joker" then
@@ -380,6 +387,5 @@ function Card.generate_UIBox_ability_table(self)
 	end
 	return generate_UIBox_ability_tableref(self)
 end
-
 ----------------------------------------------
 ------------MOD CODE END----------------------
