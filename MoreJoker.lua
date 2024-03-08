@@ -82,35 +82,42 @@ end
 function SMODS.INIT.moreJoker()
 
 	add_item(MOD_ID, "Joker", "j_buffet", 
-	{order = 1, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Buffet", set = "Joker", config = {extra = {chips = 20, chip_mod = 10}}},
+	{order = 1, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 4, name = "Buffet", set = "Joker", config = {extra = {chips = 15, chip_mod = 15}}},
 	{
 		name = "Buffet",
 		text = {"When {C:attention}Blind{} is selected,", "Gains {C:chips}+#2#{} Chips", "{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)"} --When blind is selected, Gains +20 Chips (Currently +X Chips)
 	})
 
 	add_item(MOD_ID, "Joker", "j_salesman",
-	{order = 2, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}, pos = {x=0,y=10}},
+	{order = 2, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 1, cost = 3, name = "Salesman Joker", set = "Joker", config = {extra = 4}},
 	{
 		name = "Salesman Joker",
 		text = {"Sells for {C:money}X#1#{} value"} --Sells for x4 value
 	})
 
 	add_item(MOD_ID, "Joker", "j_conglomerate",
-	{order = 3, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}, pos = {x=1,y=4}},
+	{order = 3, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 3, cost = 8, name = "Conglomerate Joker", set = "Joker", config = {extra = 1}},
 	{
 		name = "Conglomerate Joker",
 		text = {"Each played card with", "{V:1}#2#{} suit gives", "{C:money}+$#1#{} when scored,", "{s:0.8}suit changes at end of round"} --+$1 for each card played of a specific suit. The suit changes at the end of each round.
 	})
 
 	add_item(MOD_ID, "Joker", "j_dressing_table",
-	{order = 4, unlocked = true, discovered = true, blueprint_compat = false, eternal_compat = true, rarity = 2, cost = 6, name = "Dressing Table", set = "Joker", config = {extra = 5}, pos = {x=5,y=2}},
+	{order = 4, unlocked = true, discovered = true, blueprint_compat = false, eternal_compat = true, rarity = 2, cost = 5, name = "Dressing Table", set = "Joker", config = {extra = 5}},
 	{
 		name = "Dressing Table",
 		text = {"{C:green}#1# in #2#{} chance to", "give a random Joker", "{C:dark_edition}Foil, Holographic,{} or {C:dark_edition}Polychrome{}", "at the end of each round"} --1 in 5 chance to give a Joker Foil, Holographic, Polychrome or Negative at the end of each round.
 	})
 
+	add_item(MOD_ID, "Joker", "j_pay_to_win",
+	{order = 5, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 2, cost = 6, name = "Pay to Win", set = "Joker", config = {extra = 3}},
+	{
+		name = "Pay to Win",
+		text = {"Playing a hand costs {C:money}$#2#{}", "and provides {X:mult,C:white}X1.5{} Mult"} --Playing a hand costs $3 and provides x1.5 Mult.
+	})
+
 	add_item(MOD_ID, "Joker", "j_archibald",
-	{order = 5, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}},
+	{order = 6, unlocked = true, discovered = true, blueprint_compat = true, eternal_compat = true, rarity = 4, cost = 20, name = "Archibald", set = "Joker", config = {extra = 0.25}, pos = {x=5,y=8}, soul_pos = {x=5, y=9}, unlock_condition = {type = '', extra = '', hidden = true}},
 	{
 		name = "Archibald",
 		text = {"Gains {X:mult,C:white}X#2#{} Mult with", "every {C:attention}Shop{} purchase", "{C:inactive}(Currently {X:mult,C:white}X#1#{C:inactive} Mult)"}, --Starting at x1 Mult, gains x0.25 Mult with every shop purchase.
@@ -272,6 +279,17 @@ function Card.calculate_joker(self, context)
 		else
 			if context.cardarea == G.jokers then
 				if context.before then --context.before/after played hand or nil determines when the joker triggers
+					if self.ability.name == "Pay to Win" then
+						if G.GAME.dollars >= self.ability.extra then
+							ease_dollars(-self.ability.extra)
+							return {
+								message = "Pay Up!",
+								colour = G.C.MONEY
+							}
+						else
+							return nil
+						end
+					end
 				elseif context.after then
 				else
 					if self.ability.name == "Buffet" then
@@ -279,6 +297,17 @@ function Card.calculate_joker(self, context)
 							message = localize{type = 'variable', key = 'a_chips', vars = {self.ability.extra.chips}},
 							chip_mod = self.ability.extra.chips,
 						}
+					end
+					if self.ability.name == "Pay to Win" then
+						if G.GAME.dollars >= self.ability.extra then
+							self.ability.x_mult = 1.5
+							return {
+								message = localize{type = 'variable', key = 'a_xmult', vars = {self.ability.x_mult}},
+								Xmult_mod = self.ability.x_mult
+							}
+						else
+							return nil
+						end
 					end
 					--[[
 					if self.ability.name == "Gaggle" then
@@ -308,6 +337,7 @@ function Card.calculate_joker(self, context)
 					end
 					]]--
 					if self.ability.name == "Archibald" and self.ability.x_mult > 1 then
+						self.ability.x_mult = 1.5
 						return {
 							message = localize{type = 'variable', key = 'a_xmult', vars = {self.ability.x_mult}},
 							Xmult_mod = self.ability.x_mult
@@ -337,16 +367,20 @@ function Card.generate_UIBox_ability_table(self)
 		
 		if self.ability.name == "Buffet" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.chip_mod}
+		--[[
 		elseif self.ability.name == "Gaggle" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.Xmult}
 		elseif self.ability.name == "Connoisseur" then
 			loc_vars = {self.ability.extra.chips, self.ability.extra.Xmult}
+		]]--
 		elseif self.ability.name == "Salesman Joker" then
 			loc_vars = {self.ability.extra}
 		elseif self.ability.name == "Conglomerate Joker" then
 			loc_vars = {self.ability.extra, localize(G.GAME.current_round.ancient_card.suit, 'suits_singular'), colours = {G.C.SUITS[G.GAME.current_round.ancient_card.suit]}}
 		elseif self.ability.name == "Dressing Table" then
 			loc_vars = {''..(G.GAME and G.GAME.probabilities.normal or 1), self.ability.extra}
+		elseif self.ability.name == "Pay to Win" then
+			loc_vars = {self.ability.x_mult, self.ability.extra}
 		elseif self.ability.name == "Archibald" then
 			loc_vars = {self.ability.x_mult, self.ability.extra}
 		else
